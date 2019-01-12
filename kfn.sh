@@ -7,7 +7,7 @@ TITLE="Kernel for Newbies"
 MAIN_TITLE="The multi-arch kernel compiler tool"
 VERSION=3.0
 FILE_FORMAT_VERSION=1
-DEFAULT_KERNEL="4.20.1"
+DEFAULT_KERNEL="5.0"
 BASE_URL="https://cdn.kernel.org/pub/linux/kernel"
 
 BANNED_CHARS=( ':' ';' '@' '.' '"' "'" '?' '!' '#' '$' '%' '[' ']' '{' '}' '&' '<' '>' '=' ',' '`' )
@@ -123,7 +123,7 @@ _load_language()
 		_CPU_BUGS_MSG="$_CPU_BUGS"
 		_X86_64_CFLAGS="CFLAGS x86_64 genericas"
 		_X86_64_TITLE="$_DEFAULT_CFLAGS_TEXT Arquitetura Intel x86_64:"
-		_SELECT_TARGET_ARCH="Selecione a arquitetura alvo.\nSe voce deseja compílar para esta mesma maquina, selecione:"
+		_SELECT_TARGET_ARCH="Selecione a arquitetura alvo.\nSe você deseja compilar para esta mesma máquina, selecione:"
 		_SAVED_PROJECT="Projeto salvo como:"
 		_SELECT_NUMBER_OF_THREADS="Selecione o número de núcleos a serem usados para compilar o código (1 to 1024).\n\nValor recomendado para este sistema:"
 		_CLEAN_MAKE_FILES="Removendo arquivos pré compilados. Isso pode levar alguns minutos."
@@ -154,7 +154,7 @@ _load_language()
 		_CPU_BUGS_DETAILS="para detalhes."
 		_DOWNLOAD_COMPLETE="Download concluído"
 		_DEPENDENCIES_NOT_INSTALLED="As seguintes dependências não estão instaladas:"
-		_ASK_INSTALL_DEPENDECIES="Você deseja instalar as dependeências em falta?"
+		_ASK_INSTALL_DEPENDECIES="Você deseja instalar as dependências em falta?"
 		_PRESS_ENTER_TO_CONTINUE_OR_CANCEL="Pressione ENTER para continuar, Control + C para cancelar."
 		_UPDATE_APT_GET="OK, vamos então atualizar a lista de pacotes do apt-get. Digite a senha, se for solicitada:"
 		_INSTALL_DEPENDENCIES="Agora, vamos instalar as depedências que estão em falta. Digite a senha, se for solicitada:"
@@ -191,6 +191,8 @@ _load_language()
 		_SELECT_CONFIG_MODE="Selecione o Utilitário de Configuração do Kernel:"
 		_TEXT_MODE="Modo de texto"
 		_GRAFICAL_MODE="Modo grafico"
+		_KERNEL_VERSION="Versão do Kernel"
+		_COMPILATION_COMPLETED_SUCESSFULLY="Compilação concluída com sucesso. Status da saída:"
 		_PROJECT_LOCATION_TXT="Local de trabalho do projeto:"
 		_CELL_PS3_INFO="**NOTA** A implementação da compatibilidade do processador Cell Broadband Engine do PlayStation 3 disponibiliza a capacidade de compilação e otimização em qualquer plataforma, entretanto, o KFN não oferece recursos exclusivos desta plataforma, como compatibilidade com RSX e reprodução de discos Bluray, a menos que o Kernel e o arquivo de configurações .config disponibilizem os módulos e compatibilidade para isto. Sistemas PS3 com Firmware 3.21 ou versões superiores e modelos FAT (NOR), Slim e Super Slim somente suportarão Linux usando OtherOS++."
 		_I386_SUPPORT_WARN="**NOTE** Official support for the i386 architecture has been removed since Kernel 3.8, but you can choose the i686 architecture that still continues to be officially supported as the x86 architecture by the newer versions.\n\nYou may have problems trying to compile Kernel 3.8 code or newer versions for i386 architecture. If your processor was manufactured in 2000 (such as Pentium 4 or Athlon64) or later, you can choose the i686 architecture compatible with most new x86 processors.\n\nSee: https://bit.ly/2EMx6jY"
@@ -298,7 +300,9 @@ _load_language()
 		_NO_SPACE_IN_DISK="No free space in disk."
 		_SELECT_CONFIG_MODE="Select the Kernel configuration utility:"
 		_TEXT_MODE="Text mode"
+		_KERNEL_VERSION="Kernel version"
 		_GRAFICAL_MODE="Graphical mode"
+		_COMPILATION_COMPLETED_SUCESSFULLY="Compilation completed successfully. Exit status:"
 		_PROJECT_LOCATION_TXT="Project location build:"
 		_CELL_PS3_INFO="**NOTE** The implementation of compatibility with the Cell Broadband Engine processor of the PlayStation 3 is only intended to apply optimizations in the Kernel, in which it does not offer any other platform-specific additional features, such as RSX and PS3 Bluray drive or playback support, unless the target version of the Kernel, .config or patch has support enabled for this. Systems with PS3 firmware 3.21 or higher versions, Slim or Superslim models will only support Linux through the use of OtherOS++."
 		_I386_SUPPORT_WARN="**NOTE** Official support for the i386 architecture has been removed since Kernel 3.8, but you can choose the i686 architecture that still continues to be officially supported as the x86/32bits architecture by the newer versions.\n\nYou may have problems trying to compile Kernel 3.8 code or newer versions for i386 architecture. If your processor was manufactured in 2000 (such as Pentium 4 or Athlon64) or later, you can choose the i686 architecture compatible with most new x86 processors.\n\nSee: https://bit.ly/2EMx6jY"
@@ -767,7 +771,9 @@ _download() # Usage: _download http://site.com/file output_file_name
 
 	if [ ! -f "$DOWNLOAD_DIR/$FILENAME" ]
 	then
-		print error "$_ERROR_DOWNLOAD $DOWNLOAD_STATUS.\n$_PRESS_ANY_KEY_TO_CONTINUE\n"
+		echo
+		print error "$_ERROR_DOWNLOAD $DOWNLOAD_STATUS"
+		print info "$_PRESS_ANY_KEY_TO_CONTINUE"
 		read a
 	fi
 }
@@ -834,7 +840,8 @@ _install_dependencies()
 
 	sudo apt-get install --no-install-recommends -y $MISSING_DEPENDENCIES
 
-	echo -e "\n$_PRESS_ENTER_TO_CONTINUE."
+	echo
+	print info "$_PRESS_ENTER_TO_CONTINUE"
 	read a
 }
 
@@ -933,7 +940,7 @@ _preset_cflags_ppc_64()
 _select_arch()
 {
 	_PROJECT_VAR_ARCH_TMP="$_PROJECT_VAR_ARCH"
-	_PROJECT_VAR_ARCH_TMP=`dialog --stdout --title "$DEFAULT_TITLE" --menu "$_SELECT_TARGET_ARCH $HOST_ARCH" 0 75 0 \
+	_PROJECT_VAR_ARCH_TMP=`dialog --stdout --title "$DEFAULT_TITLE" --menu "$_SELECT_TARGET_ARCH $HOST_ARCH." 0 75 0 \
 	"i386"	"Intel/AMD/VIA 32 bits ($_OLD_X86)" \
 	"i686"	"Intel/AMD/VIA 32 bits ($_NEWER_X86)" \
 	"x86_64"	"Intel/AMD/VIA 64 bits ($_ALSO_AMD64)" \
@@ -1221,7 +1228,7 @@ _clean_files()
 		dialog --title "$DEFAULT_TITLE" --msgbox "\n$_PROJECT_FOLDER_EMPTY_ERROR" 9 70
 	else
 		title
-		print info "$_CLEAN_MAKE_FILES"
+		print info "$_CLEAN_MAKE_FILES\n"
 		ACTUAL_DIR="`pwd`"
 		cd "$PROJECT_LOCATION_FILES/kernel/"
 		make clean
@@ -1238,16 +1245,15 @@ _start_build()
 		title
 		print info "$_START_BUILD $_PROJECT_VAR_ARCH$CROSS_COMPILATION_INFO"
 		print info "$_COMPILER: $_PROJECT_VAR_COMPILER ($COMPILER_NAME)"
+		print info "$_KERNEL_VERSION: $_PROJECT_VAR_KVERSION"
 
 		echo
 
+		CPU_TASK="$(($CPU_THREADS+1))"
+		DEFAULT_CA="--initrd kernel_image kernel_headers"
 		ACTUAL_DIR="`pwd`"
 
 		cd "$PROJECT_LOCATION_FILES/kernel/"
-
-		export CFLAGS="$CFLAGS"
-		export CXXFLAGS="$CFLAGS"
-
 
 		if [ "$_PROJECT_VAR_PREFIX_MODE" == "$_CUSTOM_PREFIX_ON" ]
 		then
@@ -1257,7 +1263,45 @@ _start_build()
 		fi
 
 		# This line makes the magic:
-		fakeroot make-kpkg -j $(($CPU_THREADS+1)) $MAKE_KPKG_PREFIX --initrd $PROJECT_PREFIX kernel-image kernel-headers
+
+		if [ "$CROSS_CC" == 0 ]
+		then
+			# Compile for host arch:
+
+			export CFLAGS="$CFLAGS"
+			export CXXFLAGS="$CFLAGS"
+
+			fakeroot make-kpkg -j $CPU_TASK $PROJECT_PREFIX $DEFAULT_CA
+		else
+			CC="--cross-compile"
+
+			# Compile for arm processor:
+
+			if [ "$_PROJECT_VAR_ARCH" == "arm" ]
+			then
+				export ARCH=arm
+				export DEB_HOST_ARCH=armhf
+				fakeroot make-kpkg -j $CPU_TASK --arch arm $CC arm-linux-gnueabihf- $PROJECT_PREFIX $DEFAULT_CA
+			fi
+
+			# Compile for arm64 processor:
+
+			if [ "$_PROJECT_VAR_ARCH" == "arm64" ]
+			then
+				export ARCH=aarch64
+				export DEB_HOST_ARCH=arm64
+				fakeroot make-kpkg -j $CPU_TASK --arch arm $CC aarch64-linux-gnu- $PROJECT_PREFIX $DEFAULT_CA
+			fi
+
+			if [ "$_PROJECT_VAR_ARCH" == "powerpc" ]
+			then
+				export ARCH=powerpc
+				export DEB_HOST_ARCH=armhf
+				fakeroot make-kpkg -j $CPU_TASK --arch arm $CC arm-linux-gnueabihf- $PROJECT_PREFIX $DEFAULT_CA
+			fi
+
+
+		fi
 
 		STATUS="$?"
 
@@ -1266,25 +1310,30 @@ _start_build()
 		then
 			echo -e "\n"
 
-			# Very incomplete list.
+			# Very incomplete list:
 
 			case "$STATUS" in
-				"2") print error "$_EXIT_BY_ERROR $STATUS: $_NO_SPACE_IN_DISK" ;;
+				"2")   print error "$_EXIT_BY_ERROR $STATUS: $_NO_SPACE_IN_DISK" ;;
 				"130") print error "$_EXIT_BY_ERROR $STATUS: $_CANCELLED_BY_USER" ;;
 				"255") print error "$_EXIT_BY_ERROR $STATUS: $_CANCELLED_BY_USER" ;;
-				*) print error "$_EXIT_BY_ERROR $STATUS: $_UNKNOWN" ;;
+				*)     print error "$_EXIT_BY_ERROR $STATUS: $_UNKNOWN" ;;
 			esac
 
 			print info "$_PRESS_ANY_KEY_TO_CONTINUE"
 			read a
 		else
+			mkdir -p "$PROJECT_LOCATION_FILES/packages/$_PROJECT_VAR_ARCH/"
 
 			mv $PROJECT_LOCATION_FILES/*.deb "$PROJECT_LOCATION_FILES/packages/"
 
-			mv $PROJECT_LOCATION_FILES/packages/linux-headers* "$PROJECT_LOCATION_FILES/packages/linux-headers-$_PROJECT_VAR_KVERSION-$_PROJECT_VAR_ARCH.deb"
-			mv $PROJECT_LOCATION_FILES/packages/linux-image* "$PROJECT_LOCATION_FILES/packages/linux-image-$_PROJECT_VAR_KVERSION-$_PROJECT_VAR_ARCH.deb"
+			mv $PROJECT_LOCATION_FILES/packages/linux-headers* "$PROJECT_LOCATION_FILES/packages/$_PROJECT_VAR_ARCH/linux-headers-$_PROJECT_VAR_KVERSION-$_PROJECT_VAR_ARCH.deb"
 
-			print info "Finish. Status: $STATUS"
+			mv $PROJECT_LOCATION_FILES/packages/linux-image* "$PROJECT_LOCATION_FILES/packages/$_PROJECT_VAR_ARCH/linux-image-$_PROJECT_VAR_KVERSION-$_PROJECT_VAR_ARCH.deb"
+
+			echo
+			print info "$_COMPILATION_COMPLETED_SUCESSFULLY $STATUS"
+			print info "$_PRESS_ANY_KEY_TO_CONTINUE"
+			read a
 		fi
 
 		cd "$ACTUAL_DIR"
@@ -1299,17 +1348,37 @@ _manage_config_file()
 	else
 		title
 
-		print info "$_KERNEL_SETUP_UTILITY\n"
-
 		ACTUAL_DIR="`pwd`"
 
 		cd "$PROJECT_LOCATION_FILES/kernel/"
 
-		if [ "$_PROJECT_VAR_SETUP" == "$_MENUCONFIG" ]
+		if [ "$CROSS_CC" == 0 ]
 		then
-			make $UTILITY_PREFIX menuconfig
+			print info "$_KERNEL_SETUP_UTILITY\n"
+
+			if [ "$_PROJECT_VAR_SETUP" == "$_MENUCONFIG" ]
+			then
+				make menuconfig
+			else
+				make xconfig
+			fi
 		else
-			make $UTILITY_PREFIX xconfig
+			print info "$_KERNEL_SETUP_UTILITY ($_PROJECT_VAR_ARCH)\n"
+
+			if [ "$_PROJECT_VAR_SETUP" == "$_MENUCONFIG" ]
+			then
+				case "$_PROJECT_VAR_ARCH" in
+					"x86_64") ARCH=arm make menuconfig ;;
+					"arm") 	ARCH=arm make menuconfig ;;
+					"arm64") 	ARCH=arm64 make menuconfig ;;
+				esac
+			else
+				case "$_PROJECT_VAR_ARCH" in
+					"x86_64") ARCH=arm make xconfig ;;
+					"arm") 	ARCH=arm make xconfig ;;
+					"arm64") 	ARCH=arm64 make xconfig ;;
+				esac
+			fi
 		fi
 
 		cd "$ACTUAL_DIR"
@@ -1337,7 +1406,7 @@ _compiler_mode()
 		"gcc" "$_GCC" `
 	else
 		COMPILER_MODE_TMP=`dialog --stdout --title "$DEFAULT_TITLE" --menu "\n$_COMPILER_TXT $_PROJECT_VAR_ARCH:" 9 60 0 \
-		"gcc" "$_GCC" \
+		"gcc"  "$_GCC" \
 		"llvm" "$_LLVM" `
 	fi
 
