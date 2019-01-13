@@ -7,14 +7,13 @@ TITLE="Kernel for Newbies"
 MAIN_TITLE="The multi-arch kernel compiler tool"
 VERSION=3.0
 FILE_FORMAT_VERSION=1
-DEFAULT_KERNEL="5.0"
+DEFAULT_KERNEL="4.20.1"
 BASE_URL="https://cdn.kernel.org/pub/linux/kernel"
 
 BANNED_CHARS=( ':' ';' '@' '.' '"' "'" '?' '!' '#' '$' '%' '[' ']' '{' '}' '&' '<' '>' '=' ',' '`' )
 BANNED_CHARS_PREFIX=( ${BANNED_CHARS[*]} '(' ')' )
 
 PRESET_CHOST[PowerPC64_Cell]="powerpc-unknown-linux-gnu"
-PRESET_CFLAGS[PowerPC64_Cell]="-mcpu=cell -O2 -pipe -mabi=altivec -maltivec"
 
 PRESET_CHOST[x86_64_atom]="x86_64_pc-linux-gnu"
 PRESET_CFLAGS[x86_64_atom]="-march=nehalem -O2 -pipe"
@@ -54,7 +53,7 @@ PRESET_CFLAGS[x86_64_6th_gen_Core]="-march=skylake -O2 -pipe"
 PRESET_CHOST[x86_64_6th_gen_Pentium]="x86_64_pc-linux-gnu"
 PRESET_CFLAGS[x86_64_6th_gen_Pentium]="-march=native"
 
-DEPENDENCIES[0]="alien axel bash bc bison build-essential bzip2 clang curl dialog dkms fakeroot flex g++ gcc gnupg2 gzip initramfs-tools kernel-package libc6 libelf-dev libncurses libncurses5-dev libnotify-bin libssl-dev lzop make pkg-config qt5-default tar wget"
+DEPENDENCIES[0]="alien axel bash bc bison binutils-multiarch build-essential bzip2 clang curl dialog dkms fakeroot flex g++ gcc gnupg2 gzip initramfs-tools kernel-package libc6 libelf-dev libncurses libncurses5-dev libnotify-bin libssl-dev lzop make pkg-config qt5-default tar wget"
 DEPENDENCIES[1]="dpkg-cross gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi" # ARM
 DEPENDENCIES[2]="dpkg-cross gcc-aarch64-linux-gnu g++-aarch64-linux-gnu" 	   # ARM64
 
@@ -139,8 +138,8 @@ _load_language()
 		_CROSS_COMPILATION_INFO="(modo de compilação-cruzada)"
 		_SET_PROJECT_PREFIX="Selecione o profixo a ser utilizado.\n\nNote que poderá ser utilizado somente letras (A-Z, a-z), números (0-9), traço, ponto e underline são recomendados.\n\nEspaço e caracteres especiais não são permitidos."
 		_PROJECT_LOCATION_BUILD="Estrutura local do projeto"
-		_FOLDER_IS_NOT_EMPTY="O seguinte diretório não esta vazio:"
-		_CONTINUE_TO_EMPTY_DIR="Para extrair e continuar, é necessário apagar os arquivos. Você deseja remover remover o conteúdo deste diretório?"
+		_FOLDER_IS_NOT_EMPTY="O seguinte diretório não está vazio:"
+		_CONTINUE_TO_EMPTY_DIR="Para extrair e continuar, é necessário apagar os arquivos. Você deseja remover o conteúdo deste diretório?"
 		_SRC_RO_MSG="Acesso de leitura e escrita em /usr/src foi permitido."
 		_TMP_RO_MSG="Acesso de somente leitura em /tmp."
 		_SRC_RW_MSG="Acesso de somente leitura em /usr/src."
@@ -181,7 +180,7 @@ _load_language()
 		_PROJECT_START_BUILD="5. Iniciar compilação"
 		_PROJECT_START_BUILD_TXT="FIRE IN THE HOLE!"
 		_PROJECT_FOLDER_EMPTY_ERROR="Não há pasta de trabalho do projeto existente.\nVocê precisa selecionar '$_EXTRACT_KERNEL_FILES' para continuar."
-		_NO_SPACE_IN_DISK="Sem espaço livre em disco."
+		_NO_SPACE_IN_DISK="Sem espaço livre em disco ou erro desconhecido."
 		_PROJECT_PREFIX="Prefixo do projeto"
 		_PKG_NOT_FOUND="O pacote do Kernel selecionado não foi encontrado.\n\nSelecione '$_DOWNLOAD_KERNEL_FILES' antes de continuar."
 		_PROJECT_PREFIX_CUSTOM="Sem prefixo customizado"
@@ -297,7 +296,7 @@ _load_language()
 		_CUSTOM_PREFIX_ON_TXT="Set the custom kernel version prefix"
 		_CUSTOM_PREFIX_OFF_TXT="Do not use custom kernel version prefix"
 		_CUSTOM_PREFIX_TXT="Defines whether to use a prefix along with the kernel version.\nExample: Kernel 3.8.10-custom_prefix_here."
-		_NO_SPACE_IN_DISK="No free space in disk."
+		_NO_SPACE_IN_DISK="No free space in disk or unknown error."
 		_SELECT_CONFIG_MODE="Select the Kernel configuration utility:"
 		_TEXT_MODE="Text mode"
 		_KERNEL_VERSION="Kernel version"
@@ -711,7 +710,9 @@ _extract() # Usage: _extract file_url
 
 		print info "$_EXTRACTING_PACKAGES $PROJECT_LOCATION_FILES"
 
+		echo -e "\033[00;32m"
 		tar -xvvf "$DOWNLOAD_DIR/$FILENAME_TAR" -C "$PROJECT_LOCATION_FILES/kernel"
+		echo -e "\033[01;37m" 			
 
 		EXTRACT_STATUS="$?"
 
@@ -725,7 +726,7 @@ _extract() # Usage: _extract file_url
 	fi
 }
 
-_download() # Usage: _download http://site.com/file output_file_name
+_download()
 {
 	title
 
@@ -761,7 +762,7 @@ _download() # Usage: _download http://site.com/file output_file_name
 
 				echo "${MD5[0]}" > "$DOWNLOAD_DIR/$FILENAME.md5"
 
-				dialog --title "$DEFAULT_TITLE" --msgbox "\n$_DOWNLOAD_COMPLETE: $FILENAME - ${MD5[0]}" 7 70
+				dialog --title "$DEFAULT_TITLE" --msgbox "\n$_DOWNLOAD_COMPLETE: $FILENAME - ${MD5[0]}" 7 75
 			fi
 		fi
 	else
@@ -1205,10 +1206,12 @@ _extract_project()
 		then
 			title
 
+			echo -e "\033[00;31m"
 			rm -rfv $PROJECT_LOCATION_FILES/
 			mkdir "$PROJECT_LOCATION_FILES"
 			mkdir "$PROJECT_LOCATION_FILES/kernel"
 			mkdir "$PROJECT_LOCATION_FILES/packages"
+			echo -e "\033[01;37m" 
 		else
 			CONTINUE_EXTRACT=0
 		fi
@@ -1299,8 +1302,6 @@ _start_build()
 				export DEB_HOST_ARCH=armhf
 				fakeroot make-kpkg -j $CPU_TASK --arch arm $CC arm-linux-gnueabihf- $PROJECT_PREFIX $DEFAULT_CA
 			fi
-
-
 		fi
 
 		STATUS="$?"
@@ -1331,7 +1332,13 @@ _start_build()
 			mv $PROJECT_LOCATION_FILES/packages/linux-image* "$PROJECT_LOCATION_FILES/packages/$_PROJECT_VAR_ARCH/linux-image-$_PROJECT_VAR_KVERSION-$_PROJECT_VAR_ARCH.deb"
 
 			echo
-			print info "$_COMPILATION_COMPLETED_SUCESSFULLY $STATUS"
+
+			if [ ! -f "$PROJECT_LOCATION_FILES/packages/$_PROJECT_VAR_ARCH/linux-image-$_PROJECT_VAR_KVERSION-$_PROJECT_VAR_ARCH.deb" ]
+			then
+				print error "$_EXIT_BY_ERROR $STATUS: $_UNKNOWN"
+			else
+				print info "$_COMPILATION_COMPLETED_SUCESSFULLY $STATUS"
+			fi
 			print info "$_PRESS_ANY_KEY_TO_CONTINUE"
 			read a
 		fi
@@ -1390,9 +1397,36 @@ _manage_config_file()
 	fi
 }
 
+_gen_kernel_version()
+{
+	_PROJECT_VAR_KVERSION_NEW=( ${_PROJECT_VAR_KVERSION//"."/" "} )
+
+	KERNEL_VERSION="${_PROJECT_VAR_KVERSION_NEW[0]}"
+	KERNEL_SUBVERSION="${_PROJECT_VAR_KVERSION_NEW[1]}"
+
+	if [ "${_PROJECT_VAR_KVERSION_NEW[2]}" == 0 ]
+	then
+		_PROJECT_VAR_KVERSION_NEW[2]=""
+	fi
+
+	if [ "x${_PROJECT_VAR_KVERSION_NEW[2]}" == "x" ]
+	then
+		KERNEL_REVISION=0
+		KERNEL_VERSION_NUMBER="$KERNEL_VERSION.$KERNEL_SUBVERSION"
+	else
+		KERNEL_REVISION="${_PROJECT_VAR_KVERSION_NEW[2]}"
+		KERNEL_VERSION_NUMBER="$KERNEL_VERSION.$KERNEL_SUBVERSION.$KERNEL_REVISION"
+	fi
+}
+
 _download_package()
 {
-	_download "https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-$_PROJECT_VAR_KVERSION.tar.xz" "linux-$_PROJECT_VAR_KVERSION"
+	if [ $KERNEL_VERSION -lt "3" ]
+	then
+		_download "https://cdn.kernel.org/pub/linux/kernel/v$KERNEL_VERSION.$KERNEL_SUBVERSION/linux-$KERNEL_VERSION.$KERNEL_SUBVERSION.$KERNEL_REVISION.tar.bz2" "linux-$_PROJECT_VAR_KVERSION"
+	else
+		_download "https://cdn.kernel.org/pub/linux/kernel/v$KERNEL_VERSION.x/linux-$KERNEL_VERSION_NUMBER.tar.xz" "linux-$_PROJECT_VAR_KVERSION"
+	fi
 }
 
 _compiler_mode()
@@ -1462,6 +1496,7 @@ _main_setup()
 
 	while [ $SETUP_EXIT == 0 ]
 	do
+		_gen_kernel_version
 		_gen_location_name
 		_check_compiler
 
@@ -1488,29 +1523,6 @@ _main_setup()
 		else
 			CROSS_COMPILATION_INFO=""
 			CROSS_CC=0
-		fi
-
-		MAKE_KPKG_PREFIX="HOSTCC=clang CC=clang"
-
-		if [ "$CROSS_CC" == 1 ]
-		then
-			case "$_PROJECT_VAR_ARCH" in
-				"x86_64")
-					MAKE_KPKG_PREFIX="HOSTCC=clang CC=clang"
-					;;
-				"arm")
-					_scan_dependencies 1
-					export CC="/usr/bin/arm-linux-gnueabihf-gcc"
-					MAKE_KPKG_PREFIX="--arch arm --cross-compile arm-none-linux-gnueabi-"
-					;;
-				"arm64")
-					_scan_dependencies 2
-					MAKE_KPKG_PREFIX="--arch arm --cross-compile gcc-aarch64-linux-gnu-"
-					;;
-			esac
-		else
-			MAKE_KPKG_PREFIX=""
-			UTILITY_PREFIX=""
 		fi
 
 		export CFLAGS="$CFLAGS"
