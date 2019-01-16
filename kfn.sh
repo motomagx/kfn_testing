@@ -5,7 +5,7 @@
 
 TITLE="Kernel for Newbies"
 MAIN_TITLE="The multi-arch kernel compiler tool"
-VERSION=3.0
+VERSION=3.0-alpha1
 FILE_FORMAT_VERSION=1
 DEFAULT_KERNEL="4.20.1"
 BASE_URL="https://cdn.kernel.org/pub/linux/kernel"
@@ -58,7 +58,7 @@ DEPENDENCIES[1]="dpkg-cross gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi" # 
 DEPENDENCIES[2]="dpkg-cross gcc-aarch64-linux-gnu g++-aarch64-linux-gnu" 	   # ARM64
 
 MIN_DISK_CAPACITY_FREE=20 # Min of 15GB free in / is needed.
-DEFAULT_TITLE=" $TITLE v$VERSION "
+DEFAULT_TITLE=" $TITLE v$VERSION (under development) "
 
 _set_language()
 {
@@ -178,7 +178,7 @@ _load_language()
 		_GENERATE_CONFIG_FILE="4. Configurar o Kernel"
 		_CLEAN_TEMPORARY_FILES_TXT="Remover arquivos pré-compilados"
 		_PROJECT_START_BUILD="5. Iniciar compilação"
-		_PROJECT_START_BUILD_TXT="FIRE IN THE HOLE!"
+		_PROJECT_START_BUILD_TXT=""
 		_PROJECT_FOLDER_EMPTY_ERROR="Não há pasta de trabalho do projeto existente.\nVocê precisa selecionar '$_EXTRACT_KERNEL_FILES' para continuar."
 		_NO_SPACE_IN_DISK="Sem espaço livre em disco ou erro desconhecido."
 		_PROJECT_PREFIX="Prefixo do projeto"
@@ -288,7 +288,7 @@ _load_language()
 		_GENERATE_CONFIG_FILE="4. Configure Kernel"
 		_CLEAN_TEMPORARY_FILES_TXT="Remove pre-compiled files"
 		_PROJECT_START_BUILD="5. Start build"
-		_PROJECT_START_BUILD_TXT="FIRE IN THE HOLE!"
+		_PROJECT_START_BUILD_TXT=""
 		_PROJECT_FOLDER_EMPTY_ERROR="There is no current project work folder.\nYou must select '$_EXTRACT_KERNEL_FILES' to continue."
 		_PROJECT_PREFIX="Project prefix"
 		_PKG_NOT_FOUND="Package not found.\n\nSelect '$_DOWNLOAD_KERNEL_FILES' before continue."
@@ -716,8 +716,10 @@ _extract() # Usage: _extract file_url
 
 		EXTRACT_STATUS="$?"
 
-		mv $PROJECT_LOCATION_FILES/kernel/*/* "$PROJECT_LOCATION_FILES/kernel"
-		mv $PROJECT_LOCATION_FILES/kernel/*/.* "$PROJECT_LOCATION_FILES/kernel"
+		mv -u $PROJECT_LOCATION_FILES/kernel/*/* "$PROJECT_LOCATION_FILES/kernel"
+		mv -u $PROJECT_LOCATION_FILES/kernel/*/.c* "$PROJECT_LOCATION_FILES/kernel"
+		mv -u $PROJECT_LOCATION_FILES/kernel/*/.g* "$PROJECT_LOCATION_FILES/kernel"
+		mv -u $PROJECT_LOCATION_FILES/kernel/*/.m* "$PROJECT_LOCATION_FILES/kernel"
 
 		echo
 		print info "$_ALL_FILES_EXTRACTED"
@@ -1441,7 +1443,7 @@ _compiler_mode()
 	else
 		COMPILER_MODE_TMP=`dialog --stdout --title "$DEFAULT_TITLE" --menu "\n$_COMPILER_TXT $_PROJECT_VAR_ARCH:" 9 60 0 \
 		"gcc"  "$_GCC" \
-		"llvm" "$_LLVM" `
+		"llvm" "$_LLVM (TODO)" `
 	fi
 
 	if [ "x$COMPILER_MODE_TMP" != "x" ]
