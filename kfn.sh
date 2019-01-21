@@ -7,7 +7,7 @@ TITLE="Kernel for Newbies"
 MAIN_TITLE="The multi-arch kernel compiler tool"
 VERSION=3.0-alpha1
 FILE_FORMAT_VERSION=1
-DEFAULT_KERNEL="4.20.1"
+DEFAULT_KERNEL="4.20.3"
 BASE_URL="https://cdn.kernel.org/pub/linux/kernel"
 
 BANNED_CHARS=( ':' ';' '@' '.' '"' "'" '?' '!' '#' '$' '%' '[' ']' '{' '}' '&' '<' '>' '=' ',' '`' )
@@ -56,6 +56,8 @@ PRESET_CFLAGS[x86_64_6th_gen_Pentium]="-march=native"
 DEPENDENCIES[0]="alien axel bash bc bison binutils-multiarch build-essential bzip2 clang curl dialog dkms fakeroot flex g++ gcc gnupg2 gzip initramfs-tools kernel-package libc6 libelf-dev libncurses libncurses5-dev libnotify-bin libssl-dev lzop make pkg-config qt5-default tar wget"
 DEPENDENCIES[1]="dpkg-cross gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi" # ARM
 DEPENDENCIES[2]="dpkg-cross gcc-aarch64-linux-gnu g++-aarch64-linux-gnu" 	   # ARM64
+DEPENDENCIES[3]="dpkg-cross gcc-multilib-i686-linux-gnu' gcc-aarch64-linux-gnu g++-aarch64-linux-gnu" 	   # i686
+DEPENDENCIES[4]="dpkg-cross gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi" 	   # powerpc
 
 MIN_DISK_CAPACITY_FREE=20 # Min of 15GB free in / is needed.
 DEFAULT_TITLE=" $TITLE v$VERSION (under development) "
@@ -142,7 +144,7 @@ _load_language()
 		_CONTINUE_TO_EMPTY_DIR="Para extrair e continuar, é necessário apagar os arquivos. Você deseja remover o conteúdo deste diretório?"
 		_SRC_RO_MSG="Acesso de leitura e escrita em /usr/src foi permitido."
 		_TMP_RO_MSG="Acesso de somente leitura em /tmp."
-		_SRC_RW_MSG="Acesso de somente leitura em /usr/src."
+		_SRC_RW_MSG="Acesso de somente leitura em /usr/src. Talvez será necessário acesso Root."
 		_EXTRACTING_PACKAGES="Extraindo pacote, diretório de saida:"
 		_DISK_FREE_SPACE_P1="Disco: Apenas"
 		_DISK_FREE_SPACE_P2="GB estão livre na partição da pasta /home, onde pelo menos 20GB é necessario. Proceda com cuidado."
@@ -330,7 +332,9 @@ SOURCE_DIR="$HOME/kfn/source"
 BUILD_DIR="$HOME/kfn/builds"
 PROJECT_DIR="$HOME/kfn/projects"
 TEMP_DIR="$HOME/kfn/temp"
+LOG_DIR="$HOME/kfn/logs"
 ALL_DEPENDECIES_INSTALLED=0
+KFNTIME="`date +%d-%m-%y-%Hh%Mm%Ss`"
 
 export DIALOGRC="$HOME/kfn/dialog_color_scheme_black_and_green"
 
@@ -364,6 +368,8 @@ print()
 	then
 		echo -e "\e[31;1m[ERRO]\e[m $TEXT"
 	fi
+
+	echo "[$MODE] $TEXT" >> "$LOG_DIR/$KFNTIME.log"
 }
 
 _start()
@@ -375,6 +381,7 @@ _start()
 	mkdir -p "$BUILD_DIR"
 	mkdir -p "$PROJECT_DIR"
 	mkdir -p "$TEMP_DIR"
+	mkdir -p "$LOG_DIR"
 
 	if [ ! -f "$HOME/kfn/language" ]
 	then
@@ -1256,6 +1263,7 @@ _start_build()
 
 		CPU_TASK="$(($CPU_THREADS+1))"
 		DEFAULT_CA="--initrd kernel_image kernel_headers"
+		DEFAULT_CA2="kernel_image kernel_headers"
 		ACTUAL_DIR="`pwd`"
 
 		cd "$PROJECT_LOCATION_FILES/kernel/"
@@ -1267,8 +1275,6 @@ _start_build()
 			PROJECT_PREFIX=""
 		fi
 
-		# This line makes the magic:
-
 		if [ "$CROSS_CC" == 0 ]
 		then
 			# Compile for host arch:
@@ -1276,34 +1282,44 @@ _start_build()
 			export CFLAGS="$CFLAGS"
 			export CXXFLAGS="$CFLAGS"
 
-			fakeroot make-kpkg -j $CPU_TASK $PROJECT_PREFIX $DEFAULT_CA
+			# This line makes the magic:
+			make deb-pkg -j $CPU_TASK $PROJECT_PREFIX #$DEFAULT_CA2
 		else
-			CC="--cross-compile"
+
+			# Compile for i686 processor:
+
+			if [ "$_PROJECT_VAR_ARCH" == "arm64" ]
+			then
+				ARCH_PREFIX="ARCH=arm64"
+				CROSS_COMPILE_ARCH="CROSS_COMPILE=aarch64-linux-gnu-"
+			fi
 
 			# Compile for arm processor:
 
 			if [ "$_PROJECT_VAR_ARCH" == "arm" ]
 			then
-				export ARCH=arm
-				export DEB_HOST_ARCH=armhf
-				fakeroot make-kpkg -j $CPU_TASK --arch arm $CC arm-linux-gnueabihf- $PROJECT_PREFIX $DEFAULT_CA
+				ARCH_PREFIX="ARCH=arm"
+				CROSS_COMPILE_ARCH="CROSS_COMPILE=arm-linux-gnueabihf-"
 			fi
 
 			# Compile for arm64 processor:
 
 			if [ "$_PROJECT_VAR_ARCH" == "arm64" ]
 			then
-				export ARCH=aarch64
-				export DEB_HOST_ARCH=arm64
-				fakeroot make-kpkg -j $CPU_TASK --arch arm $CC aarch64-linux-gnu- $PROJECT_PREFIX $DEFAULT_CA
+				ARCH_PREFIX="ARCH=arm64"
+				CROSS_COMPILE_ARCH="CROSS_COMPILE=aarch64-linux-gnu-"
 			fi
 
-			if [ "$_PROJECT_VAR_ARCH" == "powerpc" ]
+			# Compile for powerpc processor:
+
+			if [ "$_PROJECT_VAR_ARCH" == "ppc" ]
 			then
-				export ARCH=powerpc
-				export DEB_HOST_ARCH=armhf
-				fakeroot make-kpkg -j $CPU_TASK --arch arm $CC arm-linux-gnueabihf- $PROJECT_PREFIX $DEFAULT_CA
+				ARCH_PREFIX="ARCH=arm64"
+				CROSS_COMPILE_ARCH="CROSS_COMPILE=aarch64-linux-gnu-"
 			fi
+
+			# This line makes the magic:
+			make deb-pkg -j $CPU_TASK $ARCH_PREFIX $CROSS_COMPILE_ARCH $PROJECT_PREFIX
 		fi
 
 		STATUS="$?"
@@ -1620,7 +1636,7 @@ _run()
 
 	_vm_checker
 	echo -e "\e[32;1m\n $_ALL_READY\e[m"
-	#read a
+#	read a
 
 	#FILE=$( dialog --stdout --title "Please choose a file" --fselect "/home/motomagx/kfn/projects/" 15 70 )
 
