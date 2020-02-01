@@ -849,6 +849,7 @@ _install_dependencies()
 	echo -e "\n$_INSTALL_DEPENDENCIES\n"
 
 	sudo apt-get install --no-install-recommends -y $MISSING_DEPENDENCIES
+	sudo apt-get install dialog -y # Need fix here
 
 	echo
 	print info "$_PRESS_ENTER_TO_CONTINUE"
@@ -1644,6 +1645,7 @@ _run()
 }
 
 _run
+
 
 
 
